@@ -1,0 +1,45 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: ifrm-ui
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ifrm-ui
+  template:
+    metadata:
+      labels:
+        app: ifrm-ui
+    spec:
+      containers:
+        - name: ifrm-ui
+          image: atulkhot/ifrm-ui-a
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: ifrm-ui
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  selector:
+    app: ifrm-ui
+  type: LoadBalancer

@@ -1,0 +1,81 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: ifrm-gaeway
+  namespace: myproject
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api/v1/ifrm/alertmanager
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-alert-manager-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/useraccessmanagement
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-user-access-management-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/uds
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-uds-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/casereview
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-case-review-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/listsandlimits
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-lists-and-limits-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/list-and-limit/cassandra
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-lists-and-limits-cassandra-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/listsandlimitsrdbms
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-lists-and-limits-rdbms-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/rpsl/ruleengine
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-rpsl-rule-engine-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/prefilter
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-prefilter-api
+                port:
+                  number: 80
+          - path: /api/v1/ifrm/transactionmonitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: ifrm-transaction-monitoring-api
+                port:
+                  number: 80

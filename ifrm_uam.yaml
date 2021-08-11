@@ -1,0 +1,116 @@
+apiVersion: "apps/v1"
+kind: Deployment
+metadata:
+  name: ifrm-user-access-management-api
+spec:
+  selector:
+    matchLabels:
+      app: ifrm-user-access-management-api
+  replicas: 3
+
+  template:
+    metadata:
+      labels:
+        app: ifrm-user-access-management-api
+    spec:
+      containers:
+        - name: ifrm-user-access-management-api
+          image: "atulkhot/uam-e"
+          ports:
+            - name: management
+              containerPort: 8558
+          readinessProbe:
+            httpGet:
+              path: "/ready"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          livenessProbe:
+            httpGet:
+              path: "/alive"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx256m -Dconfig.resource=production.conf"
+            - name: APPLICATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ifrm-uam-secret
+                  key: secret
+            - name: ORACLE_URL
+              value: "jdbc:oracle:thin:@oracleserver:1521/ORCLPDB1"
+            - name: ORACLE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-uam
+                  key: username
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-uam
+                  key: password
+            - name: IFRM_REDIS_HOST
+              value: "redisserver"
+            - name: IFRM_REDIS_SENTINEL_ON
+              value: "false"
+            - name: IFRM_AUTH_TOKEN_REDIS_TTL
+              value: "40000"
+            - name: CASSANDRA_SERVICE_NAME
+              value: "_cql._tcp.extcassandra.myproject.svc.cluster.local"
+            - name: ZEEBE_BROKER_URL
+              value: "zeebeserver.default.svc.cluster.local:26500"
+            - name: KAFKA_SERVICE_NAME
+              value: "my-cluster-kafka-brokers.myproject.svc.cluster.local:9092"
+            - name: WORKFLOW_RPSL_CASE_BPMNPROCESSID
+              value: "rpsl-case-management"
+            - name: IFRM_TRANSACTIONMONITORING_REQUEST_TOPIC
+              value: "transactionmonitoring-request-topic-name"
+            - name: IFRM_TOKEN_VALIDITY_MINUTES
+              value: "25"
+            - name: FNR_AUTH_TOKEN_VALIDITY_MINUTES
+              value: "25"
+            - name: IFRM_COOKIE_MAX_AGE_SECONDS
+              value: "1800"
+            - name: REQUIRED_CONTACT_POINT_NR
+              value: "3"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifrm-user-access-management-api
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9000
+  selector:
+    app: ifrm-user-access-management-api
+  type: LoadBalancer
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-uam
+  namespace: myproject
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods-uam
+  namespace: myproject
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: Role
+  name: pod-uam
+  apiGroup: rbac.authorization.k8s.io

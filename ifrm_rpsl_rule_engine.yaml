@@ -1,0 +1,134 @@
+apiVersion: "apps/v1"
+kind: Deployment
+metadata:
+  name: ifrm-rpsl-rule-engine-api
+spec:
+  selector:
+    matchLabels:
+      app: ifrm-rpsl-rule-engine-api
+  replicas: 3
+
+  template:
+    metadata:
+      labels:
+        app: ifrm-rpsl-rule-engine-api
+    spec:
+      containers:
+        - name: ifrm-rpsl-rule-engine-api
+          image: "atulkhot/rpslruleengine-m"
+          ports:
+            - name: management
+              containerPort: 8558
+          readinessProbe:
+            httpGet:
+              path: "/ready"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          livenessProbe:
+            httpGet:
+              path: "/alive"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx256m -Dconfig.resource=production.conf"
+            - name: APPLICATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ifrm-re-application-secret
+                  key: secret
+            - name: ORACLE_URL
+              value: "jdbc:oracle:thin:@oracleserver:1521/ORCLPDB1"
+            - name: ORACLE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-lnlrdbms
+                  key: username
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-lnlrdbms
+                  key: password
+            - name: IFRM_ENGINE_RPSL_POOL_SIZE
+              value: "4"
+            - name: IFRM_ENGINE_RPSL_TTL_DAYS
+              value: "15"
+            - name: IFRM_RPSL_DEFAULT_RISKSCORE
+              value: "Not Applicable"
+            - name: IFRM_REDIS_HOST
+              value: "redisserver"
+            - name: IFRM_REDIS_SENTINEL_ON
+              value: "false"
+            - name: IFRM_AUTH_TOKEN_REDIS_TTL
+              value: "40000"
+            - name: CASSANDRA_CONSISTENCY_READ
+              value: "QUORUM"
+            - name: CASSANDRA_CONSISTENCY_WRITE
+              value: "QUORUM"
+            - name: CASSANDRA_QUERY_RESULT_SIZE
+              value: "50001"
+            - name: CASSANDRA_SERVICE_NAME
+              value: "_cql._tcp.extcassandra.myproject.svc.cluster.local"
+            - name: ZEEBE_BROKER_URL
+              value: "zeebeserver.default.svc.cluster.local:26500"
+            - name: KAFKA_SERVICE_NAME
+              value: "my-cluster-kafka-brokers.myproject.svc.cluster.local:9092"
+            - name: IFRM_RPSL_RULE_MANAGEMENT_GROUP_ID
+              value: "ifrm-rpsl-rule-management-group-id-1"
+            - name: IFRM_RPSL_RULEENGINE_RULEMANAGEMENT_TOPIC
+              value: "rule-management-events-topic-name"
+            - name: IFRM_KAFKA_KERBEROS_ON
+              value: "false"
+            - name: IFRM_TXN_HOLD_TOPIC
+              value: "RPSL_CONTROL_CENTER"
+            - name: IFRM_ARCHIVAL_REQUEST_TOPIC
+              value: "archival-request-topic-name"
+            - name: IFRM_TRANSACTIONMONITORING_REQUEST_TOPIC
+              value: "transactionmonitoring-request-topic-name"
+            - name: IFRM_RULEENGINE_RESPONSE_TIMEOUT_MILLISECONDS
+              value: "300"
+            - name: WORKFLOW_RPSL_CASE_BPMNPROCESSID
+              value: "rpsl-case-management"
+            - name: REQUIRED_CONTACT_POINT_NR
+              value: "3"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifrm-rpsl-rule-engine-api
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9000
+  selector:
+    app: ifrm-rpsl-rule-engine-api
+  type: LoadBalancer
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader-rule-engine
+  namespace: myproject
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods-rule-engine
+  namespace: myproject
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: Role
+  name: pod-reader-rule-engine
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,23 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: extcassandra
+spec:
+  ports:
+    - name: "cql"
+      protocol: "TCP"
+      port: 9042
+      targetPort:  9042
+      nodePort: 0
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: extcassandra
+  namespace: myproject
+subsets:
+  - addresses:
+      - ip: 35.154.32.143
+    ports:
+      - name: "cql"
+        port: 9042

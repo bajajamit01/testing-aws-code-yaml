@@ -1,0 +1,107 @@
+apiVersion: "apps/v1"
+kind: Deployment
+metadata:
+  name: ifrm-lists-and-limits-rdbms-api
+spec:
+  selector:
+    matchLabels:
+      app: ifrm-lists-and-limits-rdbms-api
+  replicas: 3
+
+  template:
+    metadata:
+      labels:
+        app: ifrm-lists-and-limits-rdbms-api
+    spec:
+      containers:
+        - name: ifrm-lists-and-limits-rdbms-api
+          image: "atulkhot/listnlimitsrdbms-z"
+          ports:
+            - name: management
+              containerPort: 8558
+          readinessProbe:
+            httpGet:
+              path: "/ready"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          livenessProbe:
+            httpGet:
+              path: "/alive"
+              port: management
+            periodSeconds: 10
+            failureThreshold: 10
+            initialDelaySeconds: 20
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx256m -Dconfig.resource=production.conf"
+            - name: APPLICATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ifrm-lnlrdbms-application-secret
+                  key: secret
+            - name: ORACLE_URL
+              value: "jdbc:oracle:thin:@oracleserver:1521/ORCLPDB1"
+            - name: ORACLE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-lnlrdbms
+                  key: username
+            - name: ORACLE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: oracle-ifrm-lnlrdbms
+                  key: password
+            - name: IFRM_REDIS_HOST
+              value: "redisserver"
+            - name: IFRM_REDIS_SENTINEL_ON
+              value: "false"
+            - name: KAFKA_SERVICE_NAME
+              value: "_tcp-clients._tcp.my-cluster-kafka-brokers"
+            - name: REQUIRED_CONTACT_POINT_NR
+              value: "3"
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 0.25
+              memory: 512Mi
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifrm-lists-and-limits-rdbms-api
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9000
+  selector:
+    app: ifrm-lists-and-limits-rdbms-api
+  type: LoadBalancer
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader
+  namespace: myproject
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods
+  namespace: myproject
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io

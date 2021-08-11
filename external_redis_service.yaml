@@ -1,0 +1,7 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: redisserver 
+spec:
+  type: ExternalName
+  externalName: ec2-13-233-75-12.ap-south-1.compute.amazonaws.com

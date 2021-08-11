@@ -1,0 +1,7 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: oracleserver 
+spec:
+  type: ExternalName
+  externalName: ec2-15-207-192-188.ap-south-1.compute.amazonaws.com
